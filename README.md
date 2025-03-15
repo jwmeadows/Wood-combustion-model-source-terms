@@ -13,3 +13,5 @@ Additional information can be found in the publications listed below:
 **Usage Instructions:**
 
 In order to use this code, you will need access to Ansys Fluent. 
+1. You will need to mesh a geometry with a wood (solid zone) and a fluid zone. Conjugate heat transfer needs to be implemented in order to use the code.
+2. You will need to hook the UDF source terms in your Fluent case setup. This [link](https://www.afs.enea.it/project/neptunius/docs/fluent/html/udf/node140.htm) provides a detailed 
