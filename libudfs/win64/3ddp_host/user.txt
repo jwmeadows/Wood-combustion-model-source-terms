@@ -1,0 +1,6 @@
+VERSION='3ddp_host'
+FLUENT_ARCH='win64'
+FLUENT_RELEASE='fluent23.2.0'
+CSOURCES=' $(SRC)wood_stove_simulations.cpp'
+HSOURCES=''
+GPU_SUPPORT='off'

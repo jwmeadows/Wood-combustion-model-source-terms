@@ -1,0 +1,5 @@
+CSOURCES= $(SRC)wood_stove_simulations.cpp
+HSOURCES=
+VERSION=3ddp_host
+PARALLEL_NODE=none
+GPU_SUPPORT=off
