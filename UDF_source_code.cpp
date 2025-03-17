@@ -663,6 +663,235 @@ DEFINE_EXECUTE_AT_END(execute_at_end_solid) /* loop over solid to assign char di
 }
 
 
+
+DEFINE_EXECUTE_ON_LOADING(load, libname)
+{
+	Message("Loading UDF library %s\n", libname);
+	Message("Warning: Hook any UDFs using the 'function hooks' option before initializing the flow !!!\n");
+
+	int udf_mem = 80; /*defined amount of udf memory allocations*/
+
+	if (n_udm < udf_mem)
+	{
+		Message("Error: This fluent session requires %i user-defined memory allocations but no allocations have been made !!\n", udf_mem);
+		return;
+	}
+}
+
+/* Pyrolysis species source terms */
+
+DEFINE_SOURCE(CO_kinetics, c, t, ds, eqn)
+{
+	real source = 0.0; /* initialize source term to zero */
+	real volume; /* define volume variable */
+	real hemicellulose_fraction_CO = 0.0217; /* fraction of evolved gases */
+	real cellulose_fraction_CO = 0.0336;
+	real lignin_fraction_CO = 0.0988;
+	real hemicellulose_fraction_CO2 = 0.144; /* fraction of evolved gases */
+	real cellulose_fraction_CO2 = 0.0238;
+	real lignin_fraction_CO2 = 0.12;
+	real hemicellulose_fraction_CH4 = 0.0142; /* fraction of evolved gases */
+	real cellulose_fraction_CH4 = 0.0107;
+	real lignin_fraction_CH4 = 0.072;
+	real total_hemicellulose_fraction = 0.1799;
+	real total_cellulose_fraction = 0.0681;
+	real total_lignin_fraction = 0.2908;
+	float CO_mf;
+	float CO2_mf;
+	float CH4_mf;
+	real total_flow_rate;
+	int CO_index = 3;
+	real mole_frac_co;
+	//int zone_ID = 91; /* ID of wood fluid interface */
+	int n = 0;
+	volume = C_VOLUME(c, t);
+
+	c_face_loop(c, t, n)
+	{
+		Thread* tf = C_FACE_THREAD(c, t, n); /* boundary face thread */
+		//float* fluid_interface_IDs = populate_linear_space(step_size_fluid_bounds, fluid_interface_ID_begin, fluid_interface_ID_end); /* populate fluid interface ID array */
+		//int index = search_array(fluid_interface_IDs, step_size_fluid_bounds, THREAD_ID(tf));
+
+		//if (index != -1) /* check if the cell face thread is equivalent to the boundary thread */
+		if (THREAD_ID(tf) == fluid_interface_ID)
+		{
+			total_flow_rate = ((total_hemicellulose_fraction * -C_UDMI(c, t, 63)) + (total_cellulose_fraction * -C_UDMI(c, t, 64)) + (total_lignin_fraction * -C_UDMI(c, t, 65)));
+			//source = ((hemicellulose_fraction * -C_UDMI(c, t, 63)) + (cellulose_fraction * -C_UDMI(c, t, 64)) + (lignin_fraction * -C_UDMI(c, t, 65))) / volume;
+			
+
+			if (total_flow_rate != 0)
+			{
+				CO_mf = ((hemicellulose_fraction_CO * -C_UDMI(c, t, 63)) + (cellulose_fraction_CO * -C_UDMI(c, t, 64)) + (lignin_fraction_CO * -C_UDMI(c, t, 65))) / total_flow_rate;
+				CO2_mf = ((hemicellulose_fraction_CO2 * -C_UDMI(c, t, 63)) + (cellulose_fraction_CO2 * -C_UDMI(c, t, 64)) + (lignin_fraction_CO2 * -C_UDMI(c, t, 65))) / total_flow_rate;
+				CH4_mf = ((hemicellulose_fraction_CH4 * -C_UDMI(c, t, 63)) + (cellulose_fraction_CH4 * -C_UDMI(c, t, 64)) + (lignin_fraction_CH4 * -C_UDMI(c, t, 65))) / total_flow_rate;
+				float mass_fracs[] = { 0, 0, CH4_mf, CO_mf, CO2_mf, 0, 0 }; /* species mass fraction array */
+				mole_frac_co = get_mole_fractions(mass_fracs, CO_index);
+				source = (mole_frac_co / volume) * (-C_UDMI(c, t, 42) / n_cells);
+			}
+			//source = 0.24347133 * (-C_UDMI(c, t, 42) / (n_cells * volume));
+			C_UDMI(c, t, 56) = source;
+			C_UDMI(c, t, 69) = mole_frac_co;
+		}
+	}
+	ds[eqn] = 0.0; /* explicit evaluation of source term */
+	return source;
+
+}
+
+DEFINE_SOURCE(CO2_kinetics, c, t, ds, eqn)
+{
+	real source = 0.0; /* initialize source term to zero */
+	real volume; /* define volume variable */
+	real hemicellulose_fraction_CO = 0.0217; /* fraction of evolved gases */
+	real cellulose_fraction_CO = 0.0336;
+	real lignin_fraction_CO = 0.0988;
+	real hemicellulose_fraction_CO2 = 0.144; /* fraction of evolved gases */
+	real cellulose_fraction_CO2 = 0.0238;
+	real lignin_fraction_CO2 = 0.12;
+	real hemicellulose_fraction_CH4 = 0.0142; /* fraction of evolved gases */
+	real cellulose_fraction_CH4 = 0.0107;
+	real lignin_fraction_CH4 = 0.072;
+	real total_hemicellulose_fraction = 0.1799;
+	real total_cellulose_fraction = 0.0681;
+	real total_lignin_fraction = 0.2908;
+	float CO_mf;
+	float CO2_mf;
+	float CH4_mf;
+	real total_flow_rate;
+	int CO2_index = 4;
+	real mole_frac_co2;
+	//int zone_ID = 91; /* ID of wood fluid interface */
+	int n = 0;
+	volume = C_VOLUME(c, t);
+
+	c_face_loop(c, t, n)
+	{
+		Thread* tf = C_FACE_THREAD(c, t, n); /* boundary face thread */
+		//float* fluid_interface_IDs = populate_linear_space(step_size_fluid_bounds, fluid_interface_ID_begin, fluid_interface_ID_end); /* populate fluid interface ID array */
+		//int index = search_array(fluid_interface_IDs, step_size_fluid_bounds, THREAD_ID(tf));
+
+		//if (index != -1) /* check if the cell face thread is equivalent to the boundary thread */
+		if (THREAD_ID(tf) == fluid_interface_ID)
+		{
+			total_flow_rate = ((total_hemicellulose_fraction * -C_UDMI(c, t, 63)) + (total_cellulose_fraction * -C_UDMI(c, t, 64)) + (total_lignin_fraction * -C_UDMI(c, t, 65)));
+			//C_UDMI(c, t, 69) = ((total_hemicellulose_fraction * -C_UDMI(c, t, 63)) + (total_cellulose_fraction * -C_UDMI(c, t, 64)) + (total_lignin_fraction * -C_UDMI(c, t, 65))) / volume;
+			//source = ((hemicellulose_fraction * -C_UDMI(c, t, 63)) + (cellulose_fraction * -C_UDMI(c, t, 64)) + (lignin_fraction * -C_UDMI(c, t, 65))) / volume;
+
+			if (total_flow_rate != 0)
+			{
+				CO_mf = ((hemicellulose_fraction_CO * -C_UDMI(c, t, 63)) + (cellulose_fraction_CO * -C_UDMI(c, t, 64)) + (lignin_fraction_CO * -C_UDMI(c, t, 65))) / total_flow_rate;
+				CO2_mf = ((hemicellulose_fraction_CO2 * -C_UDMI(c, t, 63)) + (cellulose_fraction_CO2 * -C_UDMI(c, t, 64)) + (lignin_fraction_CO2 * -C_UDMI(c, t, 65))) / total_flow_rate;
+				CH4_mf = ((hemicellulose_fraction_CH4 * -C_UDMI(c, t, 63)) + (cellulose_fraction_CH4 * -C_UDMI(c, t, 64)) + (lignin_fraction_CH4 * -C_UDMI(c, t, 65))) / total_flow_rate;
+				float mass_fracs[] = { 0, 0, CH4_mf, CO_mf, CO2_mf, 0, 0 }; /* species mass fraction array */
+				mole_frac_co2 = get_mole_fractions(mass_fracs, CO2_index);
+				//source = (((hemicellulose_fraction * -C_UDMI(c, t, 63)) + (cellulose_fraction * -C_UDMI(c, t, 64)) + (lignin_fraction * -C_UDMI(c, t, 65))) / volume) * (-C_UDMI(c, t, 42) / (n_cells * total_flow_rate));
+				source = (mole_frac_co2 / volume) * (-C_UDMI(c, t, 42) / n_cells);
+			}
+			//source = 0.50361981 * (-C_UDMI(c, t, 42) / (n_cells * volume));
+			C_UDMI(c, t, 57) = source;
+			C_UDMI(c, t, 70) = mole_frac_co2;
+		}
+	}
+
+	ds[eqn] = 0.0; /* explicit evaluation of source term */
+	return source;
+}
+
+DEFINE_SOURCE(CH4_kinetics, c, t, ds, eqn)
+{
+	real source = 0.0; /* initialize source term to zero */
+	real volume; /* define volume variable */
+	real hemicellulose_fraction_CO = 0.0217; /* fraction of evolved gases */
+	real cellulose_fraction_CO = 0.0336;
+	real lignin_fraction_CO = 0.0988;
+	real hemicellulose_fraction_CO2 = 0.144; /* fraction of evolved gases */
+	real cellulose_fraction_CO2 = 0.0238;
+	real lignin_fraction_CO2 = 0.12;
+	real hemicellulose_fraction_CH4 = 0.0142; /* fraction of evolved gases */
+	real cellulose_fraction_CH4 = 0.0107;
+	real lignin_fraction_CH4 = 0.072;
+	real total_hemicellulose_fraction = 0.1799;
+	real total_cellulose_fraction = 0.0681;
+	real total_lignin_fraction = 0.2908;
+	float CO_mf;
+	float CO2_mf;
+	float CH4_mf;
+	real total_flow_rate;
+	int CH4_index = 2;
+	real mole_frac_ch4;
+	//int zone_ID = 91; /* ID of wood fluid interface */
+	int n = 0;
+	volume = C_VOLUME(c, t);
+
+	c_face_loop(c, t, n)
+	{
+		Thread* tf = C_FACE_THREAD(c, t, n); /* boundary face thread */
+		//float* fluid_interface_IDs = populate_linear_space(step_size_fluid_bounds, fluid_interface_ID_begin, fluid_interface_ID_end); /* populate fluid interface ID array */
+		//int index = search_array(fluid_interface_IDs, step_size_fluid_bounds, THREAD_ID(tf));
+
+		//if (index != -1) /* check if the cell face thread is equivalent to the boundary thread */
+		if (THREAD_ID(tf) == fluid_interface_ID)
+		{
+			total_flow_rate = ((total_hemicellulose_fraction * -C_UDMI(c, t, 63)) + (total_cellulose_fraction * -C_UDMI(c, t, 64)) + (total_lignin_fraction * -C_UDMI(c, t, 65)));
+			
+
+			if (total_flow_rate != 0)
+			{
+				CO_mf = ((hemicellulose_fraction_CO * -C_UDMI(c, t, 63)) + (cellulose_fraction_CO * -C_UDMI(c, t, 64)) + (lignin_fraction_CO * -C_UDMI(c, t, 65))) / total_flow_rate;
+				CO2_mf = ((hemicellulose_fraction_CO2 * -C_UDMI(c, t, 63)) + (cellulose_fraction_CO2 * -C_UDMI(c, t, 64)) + (lignin_fraction_CO2 * -C_UDMI(c, t, 65))) / total_flow_rate;
+				CH4_mf = ((hemicellulose_fraction_CH4 * -C_UDMI(c, t, 63)) + (cellulose_fraction_CH4 * -C_UDMI(c, t, 64)) + (lignin_fraction_CH4 * -C_UDMI(c, t, 65))) / total_flow_rate;
+				float mass_fracs[] = { 0, 0, CH4_mf, CO_mf, CO2_mf, 0, 0 }; /* species mass fraction array */
+				mole_frac_ch4 = get_mole_fractions(mass_fracs, CH4_index);
+				//source = (((hemicellulose_fraction * -C_UDMI(c, t, 63)) + (cellulose_fraction * -C_UDMI(c, t, 64)) + (lignin_fraction * -C_UDMI(c, t, 65))) / volume) * (-C_UDMI(c, t, 42) / (n_cells * total_flow_rate));
+				source = (mole_frac_ch4 / volume) * (-C_UDMI(c, t, 42) / n_cells);
+			}
+			//source = ((hemicellulose_fraction * -C_UDMI(c, t, 63)) + (cellulose_fraction * -C_UDMI(c, t, 64)) + (lignin_fraction * -C_UDMI(c, t, 65))) / volume;
+			//source = 0.25290885 * (-C_UDMI(c, t, 42) / (n_cells * volume));
+			C_UDMI(c, t, 58) = source;
+			C_UDMI(c, t, 71) = mole_frac_ch4;
+		}
+	}
+
+
+	ds[eqn] = 0.0; /* explicit evaluation of source term */
+	return source;
+
+}
+
+/* Pyrolysis energy source terms */
+
+DEFINE_SOURCE(hemicellulose_hod, c, t, ds, eqn)
+{
+	real source = 0.0; /* initialize source term to zero */
+	real hod = -39.53 * pow(10, 3); /* kJ/kg. Exothermic */
+	source = hod * C_UDMI(c, t, 53) * initial_density;
+	C_UDMI(c, t, 59) = source;
+	ds[eqn] = 0.0; /* explicit evaluation of source term */
+	return source;
+}
+
+DEFINE_SOURCE(cellulose_hod, c, t, ds, eqn)
+{
+	real source = 0.0; /* initialize source term to zero */
+	real hod = 146.35 * pow(10, 3); /* kJ/kg. Endothermic */
+	source = hod * C_UDMI(c, t, 54) * initial_density;
+	C_UDMI(c, t, 60) = source;
+	ds[eqn] = 0.0; /* explicit evaluation of source term */
+	return source;
+}
+
+DEFINE_SOURCE(lignin_hod, c, t, ds, eqn)
+{
+	real source = 0.0; /* initialize source term to zero */
+	real hod = -579.87 * pow(10, 3); /* kJ/kg. Endothermic */
+	source = hod * C_UDMI(c, t, 55) * initial_density;
+	C_UDMI(c, t, 61) = source;
+	ds[eqn] = 0.0; /* explicit evaluation of source term */
+	return source;
+}
+
+/* Char oxidation species source terms */
+
 DEFINE_SOURCE(oxygen_sink, c, t, ds, eqn)
 {
 	real source = 0.0;
@@ -1013,6 +1242,7 @@ DEFINE_SOURCE(co_flux, c, t, ds, eqn)
 	return source;
 }
 
+/* Char oxidation energy source term */
 
 DEFINE_SOURCE(energy_source, c, t, ds, eqn)
 {
@@ -1042,230 +1272,6 @@ DEFINE_SOURCE(energy_source, c, t, ds, eqn)
 		}
 	}
 
-	ds[eqn] = 0.0; /* explicit evaluation of source term */
-	return source;
-}
-
-DEFINE_EXECUTE_ON_LOADING(load, libname)
-{
-	Message("Loading UDF library %s\n", libname);
-	Message("Warning: Hook any UDFs using the 'function hooks' option before initializing the flow !!!\n");
-
-	int udf_mem = 80; /*defined amount of udf memory allocations*/
-
-	if (n_udm < udf_mem)
-	{
-		Message("Error: This fluent session requires %i user-defined memory allocations but no allocations have been made !!\n", udf_mem);
-		return;
-	}
-}
-
-/* species source terms */
-
-DEFINE_SOURCE(CO_kinetics, c, t, ds, eqn)
-{
-	real source = 0.0; /* initialize source term to zero */
-	real volume; /* define volume variable */
-	real hemicellulose_fraction_CO = 0.0217; /* fraction of evolved gases */
-	real cellulose_fraction_CO = 0.0336;
-	real lignin_fraction_CO = 0.0988;
-	real hemicellulose_fraction_CO2 = 0.144; /* fraction of evolved gases */
-	real cellulose_fraction_CO2 = 0.0238;
-	real lignin_fraction_CO2 = 0.12;
-	real hemicellulose_fraction_CH4 = 0.0142; /* fraction of evolved gases */
-	real cellulose_fraction_CH4 = 0.0107;
-	real lignin_fraction_CH4 = 0.072;
-	real total_hemicellulose_fraction = 0.1799;
-	real total_cellulose_fraction = 0.0681;
-	real total_lignin_fraction = 0.2908;
-	float CO_mf;
-	float CO2_mf;
-	float CH4_mf;
-	real total_flow_rate;
-	int CO_index = 3;
-	real mole_frac_co;
-	//int zone_ID = 91; /* ID of wood fluid interface */
-	int n = 0;
-	volume = C_VOLUME(c, t);
-
-	c_face_loop(c, t, n)
-	{
-		Thread* tf = C_FACE_THREAD(c, t, n); /* boundary face thread */
-		//float* fluid_interface_IDs = populate_linear_space(step_size_fluid_bounds, fluid_interface_ID_begin, fluid_interface_ID_end); /* populate fluid interface ID array */
-		//int index = search_array(fluid_interface_IDs, step_size_fluid_bounds, THREAD_ID(tf));
-
-		//if (index != -1) /* check if the cell face thread is equivalent to the boundary thread */
-		if (THREAD_ID(tf) == fluid_interface_ID)
-		{
-			total_flow_rate = ((total_hemicellulose_fraction * -C_UDMI(c, t, 63)) + (total_cellulose_fraction * -C_UDMI(c, t, 64)) + (total_lignin_fraction * -C_UDMI(c, t, 65)));
-			//source = ((hemicellulose_fraction * -C_UDMI(c, t, 63)) + (cellulose_fraction * -C_UDMI(c, t, 64)) + (lignin_fraction * -C_UDMI(c, t, 65))) / volume;
-			
-
-			if (total_flow_rate != 0)
-			{
-				CO_mf = ((hemicellulose_fraction_CO * -C_UDMI(c, t, 63)) + (cellulose_fraction_CO * -C_UDMI(c, t, 64)) + (lignin_fraction_CO * -C_UDMI(c, t, 65))) / total_flow_rate;
-				CO2_mf = ((hemicellulose_fraction_CO2 * -C_UDMI(c, t, 63)) + (cellulose_fraction_CO2 * -C_UDMI(c, t, 64)) + (lignin_fraction_CO2 * -C_UDMI(c, t, 65))) / total_flow_rate;
-				CH4_mf = ((hemicellulose_fraction_CH4 * -C_UDMI(c, t, 63)) + (cellulose_fraction_CH4 * -C_UDMI(c, t, 64)) + (lignin_fraction_CH4 * -C_UDMI(c, t, 65))) / total_flow_rate;
-				float mass_fracs[] = { 0, 0, CH4_mf, CO_mf, CO2_mf, 0, 0 }; /* species mass fraction array */
-				mole_frac_co = get_mole_fractions(mass_fracs, CO_index);
-				source = (mole_frac_co / volume) * (-C_UDMI(c, t, 42) / n_cells);
-			}
-			//source = 0.24347133 * (-C_UDMI(c, t, 42) / (n_cells * volume));
-			C_UDMI(c, t, 56) = source;
-			C_UDMI(c, t, 69) = mole_frac_co;
-		}
-	}
-	ds[eqn] = 0.0; /* explicit evaluation of source term */
-	return source;
-
-}
-
-DEFINE_SOURCE(CO2_kinetics, c, t, ds, eqn)
-{
-	real source = 0.0; /* initialize source term to zero */
-	real volume; /* define volume variable */
-	real hemicellulose_fraction_CO = 0.0217; /* fraction of evolved gases */
-	real cellulose_fraction_CO = 0.0336;
-	real lignin_fraction_CO = 0.0988;
-	real hemicellulose_fraction_CO2 = 0.144; /* fraction of evolved gases */
-	real cellulose_fraction_CO2 = 0.0238;
-	real lignin_fraction_CO2 = 0.12;
-	real hemicellulose_fraction_CH4 = 0.0142; /* fraction of evolved gases */
-	real cellulose_fraction_CH4 = 0.0107;
-	real lignin_fraction_CH4 = 0.072;
-	real total_hemicellulose_fraction = 0.1799;
-	real total_cellulose_fraction = 0.0681;
-	real total_lignin_fraction = 0.2908;
-	float CO_mf;
-	float CO2_mf;
-	float CH4_mf;
-	real total_flow_rate;
-	int CO2_index = 4;
-	real mole_frac_co2;
-	//int zone_ID = 91; /* ID of wood fluid interface */
-	int n = 0;
-	volume = C_VOLUME(c, t);
-
-	c_face_loop(c, t, n)
-	{
-		Thread* tf = C_FACE_THREAD(c, t, n); /* boundary face thread */
-		//float* fluid_interface_IDs = populate_linear_space(step_size_fluid_bounds, fluid_interface_ID_begin, fluid_interface_ID_end); /* populate fluid interface ID array */
-		//int index = search_array(fluid_interface_IDs, step_size_fluid_bounds, THREAD_ID(tf));
-
-		//if (index != -1) /* check if the cell face thread is equivalent to the boundary thread */
-		if (THREAD_ID(tf) == fluid_interface_ID)
-		{
-			total_flow_rate = ((total_hemicellulose_fraction * -C_UDMI(c, t, 63)) + (total_cellulose_fraction * -C_UDMI(c, t, 64)) + (total_lignin_fraction * -C_UDMI(c, t, 65)));
-			//C_UDMI(c, t, 69) = ((total_hemicellulose_fraction * -C_UDMI(c, t, 63)) + (total_cellulose_fraction * -C_UDMI(c, t, 64)) + (total_lignin_fraction * -C_UDMI(c, t, 65))) / volume;
-			//source = ((hemicellulose_fraction * -C_UDMI(c, t, 63)) + (cellulose_fraction * -C_UDMI(c, t, 64)) + (lignin_fraction * -C_UDMI(c, t, 65))) / volume;
-
-			if (total_flow_rate != 0)
-			{
-				CO_mf = ((hemicellulose_fraction_CO * -C_UDMI(c, t, 63)) + (cellulose_fraction_CO * -C_UDMI(c, t, 64)) + (lignin_fraction_CO * -C_UDMI(c, t, 65))) / total_flow_rate;
-				CO2_mf = ((hemicellulose_fraction_CO2 * -C_UDMI(c, t, 63)) + (cellulose_fraction_CO2 * -C_UDMI(c, t, 64)) + (lignin_fraction_CO2 * -C_UDMI(c, t, 65))) / total_flow_rate;
-				CH4_mf = ((hemicellulose_fraction_CH4 * -C_UDMI(c, t, 63)) + (cellulose_fraction_CH4 * -C_UDMI(c, t, 64)) + (lignin_fraction_CH4 * -C_UDMI(c, t, 65))) / total_flow_rate;
-				float mass_fracs[] = { 0, 0, CH4_mf, CO_mf, CO2_mf, 0, 0 }; /* species mass fraction array */
-				mole_frac_co2 = get_mole_fractions(mass_fracs, CO2_index);
-				//source = (((hemicellulose_fraction * -C_UDMI(c, t, 63)) + (cellulose_fraction * -C_UDMI(c, t, 64)) + (lignin_fraction * -C_UDMI(c, t, 65))) / volume) * (-C_UDMI(c, t, 42) / (n_cells * total_flow_rate));
-				source = (mole_frac_co2 / volume) * (-C_UDMI(c, t, 42) / n_cells);
-			}
-			//source = 0.50361981 * (-C_UDMI(c, t, 42) / (n_cells * volume));
-			C_UDMI(c, t, 57) = source;
-			C_UDMI(c, t, 70) = mole_frac_co2;
-		}
-	}
-
-	ds[eqn] = 0.0; /* explicit evaluation of source term */
-	return source;
-}
-
-DEFINE_SOURCE(CH4_kinetics, c, t, ds, eqn)
-{
-	real source = 0.0; /* initialize source term to zero */
-	real volume; /* define volume variable */
-	real hemicellulose_fraction_CO = 0.0217; /* fraction of evolved gases */
-	real cellulose_fraction_CO = 0.0336;
-	real lignin_fraction_CO = 0.0988;
-	real hemicellulose_fraction_CO2 = 0.144; /* fraction of evolved gases */
-	real cellulose_fraction_CO2 = 0.0238;
-	real lignin_fraction_CO2 = 0.12;
-	real hemicellulose_fraction_CH4 = 0.0142; /* fraction of evolved gases */
-	real cellulose_fraction_CH4 = 0.0107;
-	real lignin_fraction_CH4 = 0.072;
-	real total_hemicellulose_fraction = 0.1799;
-	real total_cellulose_fraction = 0.0681;
-	real total_lignin_fraction = 0.2908;
-	float CO_mf;
-	float CO2_mf;
-	float CH4_mf;
-	real total_flow_rate;
-	int CH4_index = 2;
-	real mole_frac_ch4;
-	//int zone_ID = 91; /* ID of wood fluid interface */
-	int n = 0;
-	volume = C_VOLUME(c, t);
-
-	c_face_loop(c, t, n)
-	{
-		Thread* tf = C_FACE_THREAD(c, t, n); /* boundary face thread */
-		//float* fluid_interface_IDs = populate_linear_space(step_size_fluid_bounds, fluid_interface_ID_begin, fluid_interface_ID_end); /* populate fluid interface ID array */
-		//int index = search_array(fluid_interface_IDs, step_size_fluid_bounds, THREAD_ID(tf));
-
-		//if (index != -1) /* check if the cell face thread is equivalent to the boundary thread */
-		if (THREAD_ID(tf) == fluid_interface_ID)
-		{
-			total_flow_rate = ((total_hemicellulose_fraction * -C_UDMI(c, t, 63)) + (total_cellulose_fraction * -C_UDMI(c, t, 64)) + (total_lignin_fraction * -C_UDMI(c, t, 65)));
-			
-
-			if (total_flow_rate != 0)
-			{
-				CO_mf = ((hemicellulose_fraction_CO * -C_UDMI(c, t, 63)) + (cellulose_fraction_CO * -C_UDMI(c, t, 64)) + (lignin_fraction_CO * -C_UDMI(c, t, 65))) / total_flow_rate;
-				CO2_mf = ((hemicellulose_fraction_CO2 * -C_UDMI(c, t, 63)) + (cellulose_fraction_CO2 * -C_UDMI(c, t, 64)) + (lignin_fraction_CO2 * -C_UDMI(c, t, 65))) / total_flow_rate;
-				CH4_mf = ((hemicellulose_fraction_CH4 * -C_UDMI(c, t, 63)) + (cellulose_fraction_CH4 * -C_UDMI(c, t, 64)) + (lignin_fraction_CH4 * -C_UDMI(c, t, 65))) / total_flow_rate;
-				float mass_fracs[] = { 0, 0, CH4_mf, CO_mf, CO2_mf, 0, 0 }; /* species mass fraction array */
-				mole_frac_ch4 = get_mole_fractions(mass_fracs, CH4_index);
-				//source = (((hemicellulose_fraction * -C_UDMI(c, t, 63)) + (cellulose_fraction * -C_UDMI(c, t, 64)) + (lignin_fraction * -C_UDMI(c, t, 65))) / volume) * (-C_UDMI(c, t, 42) / (n_cells * total_flow_rate));
-				source = (mole_frac_ch4 / volume) * (-C_UDMI(c, t, 42) / n_cells);
-			}
-			//source = ((hemicellulose_fraction * -C_UDMI(c, t, 63)) + (cellulose_fraction * -C_UDMI(c, t, 64)) + (lignin_fraction * -C_UDMI(c, t, 65))) / volume;
-			//source = 0.25290885 * (-C_UDMI(c, t, 42) / (n_cells * volume));
-			C_UDMI(c, t, 58) = source;
-			C_UDMI(c, t, 71) = mole_frac_ch4;
-		}
-	}
-
-
-	ds[eqn] = 0.0; /* explicit evaluation of source term */
-	return source;
-
-}
-
-DEFINE_SOURCE(hemicellulose_hod, c, t, ds, eqn)
-{
-	real source = 0.0; /* initialize source term to zero */
-	real hod = -39.53 * pow(10, 3); /* kJ/kg. Exothermic */
-	source = hod * C_UDMI(c, t, 53) * initial_density;
-	C_UDMI(c, t, 59) = source;
-	ds[eqn] = 0.0; /* explicit evaluation of source term */
-	return source;
-}
-
-DEFINE_SOURCE(cellulose_hod, c, t, ds, eqn)
-{
-	real source = 0.0; /* initialize source term to zero */
-	real hod = 146.35 * pow(10, 3); /* kJ/kg. Endothermic */
-	source = hod * C_UDMI(c, t, 54) * initial_density;
-	C_UDMI(c, t, 60) = source;
-	ds[eqn] = 0.0; /* explicit evaluation of source term */
-	return source;
-}
-
-DEFINE_SOURCE(lignin_hod, c, t, ds, eqn)
-{
-	real source = 0.0; /* initialize source term to zero */
-	real hod = -579.87 * pow(10, 3); /* kJ/kg. Endothermic */
-	source = hod * C_UDMI(c, t, 55) * initial_density;
-	C_UDMI(c, t, 61) = source;
 	ds[eqn] = 0.0; /* explicit evaluation of source term */
 	return source;
 }
