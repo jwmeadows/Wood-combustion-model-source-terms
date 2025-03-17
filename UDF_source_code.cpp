@@ -892,6 +892,7 @@ DEFINE_SOURCE(lignin_hod, c, t, ds, eqn)
 
 /* Char oxidation species source terms */
 
+/* Oxygen sink */
 DEFINE_SOURCE(oxygen_sink, c, t, ds, eqn)
 {
 	real source = 0.0;
@@ -1011,8 +1012,8 @@ DEFINE_SOURCE(oxygen_sink, c, t, ds, eqn)
 	return source;
 }
 
-/* Don't hook CO2 source */
-DEFINE_SOURCE(co2_flux, c, t, ds, eqn)
+/* CO2 source */
+DEFINE_SOURCE(char_co2_flux, c, t, ds, eqn)
 {
 	real source = 0.0;
 	real volume; /*cell volume */
@@ -1124,7 +1125,8 @@ DEFINE_SOURCE(co2_flux, c, t, ds, eqn)
 	return source;
 }
 
-DEFINE_SOURCE(co_flux, c, t, ds, eqn)
+/* CO source */
+DEFINE_SOURCE(char_co_flux, c, t, ds, eqn)
 {
 	real source = 0.0;
 	real volume; /*cell volume */
@@ -1244,7 +1246,7 @@ DEFINE_SOURCE(co_flux, c, t, ds, eqn)
 
 /* Char oxidation energy source term */
 
-DEFINE_SOURCE(energy_source, c, t, ds, eqn)
+DEFINE_SOURCE(char_energy_source, c, t, ds, eqn)
 {
 	real source = 0.0; /* initialize source term to zero */
 	real volume; /* define volume variable */
