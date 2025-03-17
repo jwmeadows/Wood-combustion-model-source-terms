@@ -10,17 +10,68 @@ Theoretical model development and validation data can be found in the publicatio
 
 3. Banagiri S, Meadows J, Lattimer BY. A computational fluid dynamics model to estimate local quantities in firebrand char oxidation. Journal of Fire Sciences. 2023;41(6):241-268. doi:10.1177/07349041231195847.
 
-**Usage Instructions:**
+**General Usage Instructions:**
 
 In order to use this code, you will need access to Ansys Fluent and Visual Studio for compiling the C++ code. 
 1. You will need to mesh a geometry with a wood (solid zone) and a fluid zone. Conjugate heat transfer needs to be implemented in order to use the code.
 2. If you are using the UDF source code for the first time, then you will need to compile and build a UDF library in the same folder where you have saved your source code and Fluent case file. To do this, launch the Native Tools command prompt for Visual Studio (VS) and change directory (cd) to the path where you saved your source code and Fluent case file. Now, launch Ansys Fluent from the command prompt in the **same directory as the Fluent case file and the UDF source code**.  
 3. You will need to hook the UDF source terms in your Fluent case setup. This [link](https://www.afs.enea.it/project/neptunius/docs/fluent/html/udf/node140.htm) provides a detailed explanation of how to hook UDFs to your Fluent case.
-4. The current UDF source code has different UDFs for setting solid properties (DEFINE_PROPERTY), source terms in the solid and fluid domains (DEFINE_SOURCE), initializing the calculation (DEFINE_INIT), functions to displays errors / warnings (DEFINE_EXECUTE_ON_LOADING), and functions executing at the end of time step (DEFINE_EXECUTE_AT_END). These need to be hooked separately. The detailed procedure for hooking these UDFs is also provided in this [link](https://www.afs.enea.it/project/neptunius/docs/fluent/html/udf/node140.htm).
+4. The current UDF source code has different UDFs for setting solid properties (```DEFINE_PROPERTY```), source terms in the solid and fluid domains (```DEFINE_SOURCE```), initializing the calculation (```DEFINE_INIT```), functions to displays errors / warnings (```DEFINE_EXECUTE_ON_LOADING```), and functions executing at the end of time step (```DEFINE_EXECUTE_AT_END```). These need to be hooked separately. The detailed procedure for hooking these UDFs is also provided in this [link](https://www.afs.enea.it/project/neptunius/docs/fluent/html/udf/node140.htm).
 5. Be sure to check the solid zone and fluid ID's and solid and fluid interface ID's in your case setup. These need to match with the ID's declared in the global variables.
 6. Initialize and run the calculation as usual.
-7. The execution workflow is as follows: After hooking the UDFs, the DEFINE_EXECUTE_ON_LOADING macro gets executed. This macro displays custom warning/error messages in the Fluent GUI. The DEFINE_INIT macro gets executed once you initialize the Fluent case file. Before running the calculations, Fluent executes the DEFINE_SOURCE macro. This macro supplies the pyrolysis and char oxidation species and energy source terms. These source terms are supplied to the governing equations and impact the flowfield, reaction rates, and heat transfer. As you run the calculations, Fluent performs inner iterations to solve the N-S equations plus additional transport, species, and radiative transport equations. After Fluent performs inner iterations, the DEFINE_PROPERTY macro gets executed. This macro sets the wood density and thermal conductivity as a function of a progress variable. After executing the DEFINE_PROPERTY macro, Fluent performs outer iterations to solve the governing equations. After performing outer iterations, Fluent executes the DEFINE_EXECUTE_AT_END macro. This macro does not directly alter the governing equations; however, this macro consists of several user defined memories (C_UDMIs) which are used in the DEFINE_PROPERTY and DEFINE_SOURCE macros.  
-    
+7. The execution workflow is as follows: After hooking the UDFs, the ```DEFINE_EXECUTE_ON_LOADING``` macro gets executed. This macro displays custom warning/error messages in the Fluent GUI. The ```DEFINE_INIT``` macro gets executed once you initialize the Fluent case file. Before running the calculations, Fluent executes the ```DEFINE_SOURCE``` macro. This macro supplies the pyrolysis and char oxidation species and energy source terms. These source terms are supplied to the governing equations and impact the flowfield, reaction rates, and heat transfer. As you run the calculations, Fluent performs inner iterations to solve the N-S equations plus additional transport, species, and radiative transport equations. After Fluent performs inner iterations, the ```DEFINE_PROPERTY``` macro gets executed. This macro sets the wood density and thermal conductivity as a function of a progress variable. After executing the DEFINE_PROPERTY macro, Fluent performs outer iterations to solve the governing equations. After performing outer iterations, Fluent executes the DEFINE_EXECUTE_AT_END macro. This macro does not directly alter the governing equations; however, this macro consists of several user defined memories (C_UDMIs) which are used in the ```DEFINE_PROPERTY``` and ```DEFINE_SOURCE``` macros.  
+
+**Specific Usage Instructions \ Code Workflow:**
+
+Include relevant libraries before running the code. Be sure to include the UDF library in the preamble as follows:
+
+```
+#include <udf.h>
+```
+After defining the preprocessor directives in the preamble, the global variables and static global variables are defined. Define the initial density ($$kg/m^3$$) of the wood sample ```initial_density``` and the final density ($$kg/m^3$$) of the wood sample after degradation ```final_density```. The final density in this code is computed from previous TGA experiments conducted at the Extreme lab at Virginia Tech. After defining the initial and final densities, assign the total number of cells on the wood surface in the CFD ```n_cells```. ```n_cells``` is used in the ```DEFINE_SOURCE``` macros which provide the pyrolysis gas (methane, carbon monoxide, and carbon dioxide) source terms. The total pyrolysis gas source terms are then equally distributed across all the ```n_cells``` on the surface. The preamble also includes the solid zone cell ID ```solid_ID```, fluid zone ID ```fluid_ID```, the solid interface ID ```solid_interface_ID```, and the fluid interface ID ```fluid_interface_ID```. If you have multiple solid zones, uncomment the ```solid_interface_ID_begin```, ```solid_interface_ID_end```, ```step_size_solid_bounds```, ```fluid_interface_ID_begin```, ```fluid_interface_ID_end```, and ```step_size_fluid_bounds```. These variables are assigned the IDs of various solid zones, the solid interfaces, and their corresponding fluid interfaces. Uncomment every instance of these variables throughout the UDF.
+
+This code uses three first-order reactions (hemicellulose, cellulose, and lignin degradation) for pyrolysis and one reaction for char oxidation. The Arrhenius rate parameters for the pyrolysis reactions are given by ```A_hemicellulose```, ```A_cellulose```, ```A_lignin``` (1/s), and ```E_hemicellulose```, ```E_cellulose```, ```E_lignin``` (J/mol). The initial TGA fractions ```f_hemicellulose```, ```f_cellulose```, ```f_lignin```, and ```f_res``` are defined as static global variables. ```f_res``` represents the residual char fraction from the TGA experiments conducted at the Extreme lab at Virginia Tech. The TGA fraction (f) is related to the mass fraction (Y) using the equation below. The initial composition of the wood species is obtained from [this](https://doi.org/10.1016/j.enconman.2020.112818) study by Soria-Verdugo et al. 
+
+$$
+Y = \frac{f}{1 - f_{res}} 
+$$
+
+By assuming first-order pyrolysis kinetics, the pyrolytic degradation of each pseudo-component j (hemicellulose, cellulose, and lignin) is modeled by the equation below at the end of each timestep t+dt and timestep size of dt:
+
+$$
+\frac{df_j}{dt} = -f_j A \exp \left(-\frac{E}{RT} \right)
+$$
+
+$$
+f_{j, t+dt} = f_{j, t} \exp \left( \exp \left(-A exp \left( -\frac{E}{R_u T} \right) dt \right) \right)
+$$
+
+The TGA fractions are altered at the end of each timestep in the ```EXECUTE_AT_END``` macro. In the ```EXECUTE_AT_END``` macro, these TGA fractions are assigned to the UDMs ```C_UDMI(c, t, 13)```, ```C_UDMI(c, t, 14)```, and ```C_UDMI(c, t, 15)```. After computing the individual TGA fractions, the sample density is updated using the following equations:
+
+$$
+f_{total, t+dt} = f_{hemicellulose, t+dt} + f_{cellulose, t+dt} + f_{lignin, t+dt} + f_{res}
+$$
+
+$$
+\rho_{t+dt} = f_{total, t+dt} \times \rho_{initial}
+$$
+
+These equations are implemented in the ```DEFINE_PROPERTY``` macro where the sample density is changed every timestep. The change in density every timestep is recorded and the mass loss rate due to pyrolysis reactions is calculated using the UDM ```C_UDMI(c, t, 5)``` in the ```DEFINE_EXECUTE_AT_END``` macro. The individual pseudocomponent mass loss rates ($$\frac{dm_j}{dt}$$) are defined using the following equation
+
+$$
+\frac{dm_j}{dt} = \rho_{initial} V \times \frac{df_j}{dt}
+$$
+
+These pseudo-component mass loss rates at every finite volume computatonal cells are recorded using the UDMs ```C_UDMI(c, t, 63)```, ```C_UDMI(c, t, 64)```, and ```C_UDMI(c, t, 65)```. These UDMs are then used in various ```DEFINE_SOURCE``` macros for defining the species (methane, carbon dioxide, and carbon monoxide) source terms and pseudocomponent energy of decomposition terms. The relationships between the species production rates ($$\frac{d m_i}{dt}$$) and the pseudocomponent mass loss rate ($$\frac{d m_j}{dt}$$) are developed using volatile fractions $$\psi_{i, j}$$ as shown in the equation below. The calculation of species production rates involve the computation of mass fractions and mole fractions, which is achieved using the ```get_mole_fractions``` function. The rationale for using the volatile fractions is described in the authors' [previous study](https://doi.org/10.1016/j.fuel.2024.133416).
+
+$$
+\frac{dm_i}{dt} = \sum_{j = 1}^{3} \psi_{i, j} \frac{dm_j}{dt}
+$$
+
+The energies of decomposition for the pseudocomponents ($$\Delta h_j \frac{dm_j}{dt}$$) are also defined using ```DEFINE_SOURCE``` macros. The energy of decomposition relies on the heat/enthalpy of decomposition of each pseudocomponent ($$\Delta h_j$$). The methodology for computing $$\Delta h_j$$ is also given in the authors' [previous study](https://doi.org/10.1016/j.fuel.2024.133416). Since the source terms in the N-S equations are normalized by the cell volume, the species production rate source terms have the units of $$kg/m^3 s$$ and the energy of decomposition source terms have the units of $$W/m^3$$.
+
+The char oxidation source term macros ```DEFINE_SOURCE(char_oxygen_sink, c, t, ds, eqn)```, ```DEFINE_SOURCE(char_co2_flux, c, t, ds, eqn)```, ```DEFINE_SOURCE(char_co_flux, c, t, ds, eqn)```, and ```DEFINE_SOURCE(char_energy_source, c, t, ds, eqn)``` define the species and energy source terms for char oxidation. These source terms were defined based on the parameters and expressions provided by Anca-Couce et al. in [this](https://doi.org/10.1016/j.combustflame.2011.11.015) paper. 
+
 **Common Pitfalls/Tips for executing the UDFs:**
 
 1. This source code consists of many user-defined memory allocations (C_UDMIs). These C_UDMIs are used in DEFINE_SOURCE and DEFINE_PROPERTY macros. Be sure to allocate enough user defined memory **prior to initializing the case**. Failure to allocate enough user defined memory will result in SIGSEV segmentation errors. This [link](https://www.afs.enea.it/project/neptunius/docs/fluent/html/udf/node103.htm) describes how to allocate user defined memory.
