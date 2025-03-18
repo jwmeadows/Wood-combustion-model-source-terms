@@ -149,6 +149,8 @@ In order to refer to specific macros or functions in this UDF code, please cite 
      note = {Last accessed: <insert your access date>}
 }
 
+```
+
 **Acknowledgment:**
 
 This work was supported by the United States Department of Energy (DOE) through the Office of Energy Efficiency and Renewable Energy (EERE), Project Number: DE-EE0009770. This project is a collaborative effort between the University of Alabama and Virginia Tech. 
