@@ -145,7 +145,7 @@ In order to refer to specific macros or functions in this UDF code, please cite 
 ```
 @misc{UDF_source_terms,
     title = {Wood_combustion_UDF_website},
-    url = {https://github.com/shrikar1999/Wood-combustion-model-source-terms},
+    url = {https://github.com/jwmeadows/Wood-combustion-model-source-terms},
      note = {Last accessed: <insert your access date>}
 }
 
