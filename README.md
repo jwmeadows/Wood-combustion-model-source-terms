@@ -12,7 +12,7 @@ Theoretical model development and validation data can be found in the publicatio
 
 **General Usage Instructions:**
 
-In order to use this code, you will need access to Ansys Fluent and Visual Studio for compiling the C++ code. 
+In order to use this code, you will need access to Ansys Fluent and a C++ compiler. 
 1. You will need to mesh a geometry with a wood (solid zone) and a fluid zone. Conjugate heat transfer needs to be implemented in order to use the code.
 2. If you are using the UDF source code for the first time, then you will need to compile and build a UDF library in the same folder where you have saved your source code and Fluent case file. To do this, launch the Native Tools command prompt for Visual Studio (VS) and change directory (cd) to the path where you saved your source code and Fluent case file. Now, launch Ansys Fluent from the command prompt in the **same directory as the Fluent case file and the UDF source code**.  
 3. You will need to hook the UDF source terms in your Fluent case setup. This [link](https://www.afs.enea.it/project/neptunius/docs/fluent/html/udf/node140.htm) provides a detailed explanation of how to hook UDFs to your Fluent case.
