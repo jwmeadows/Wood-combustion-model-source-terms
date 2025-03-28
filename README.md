@@ -21,7 +21,7 @@ In order to use this code, you will need access to Ansys Fluent and a C++ compil
 6. Initialize and run the calculation as usual.
 7. The execution workflow is as follows: After hooking the UDFs, the ```DEFINE_EXECUTE_ON_LOADING``` macro gets executed. This macro displays custom warning/error messages in the Fluent GUI. The ```DEFINE_INIT``` macro gets executed once you initialize the Fluent case file. Before running the calculations, Fluent executes the ```DEFINE_SOURCE``` macro. This macro supplies the pyrolysis and char oxidation species and energy source terms. These source terms are supplied to the governing equations and impact the flowfield, reaction rates, and heat transfer. As you run the calculations, Fluent performs inner iterations to solve the N-S equations plus additional transport, species, and radiative transport equations. After Fluent performs inner iterations, the ```DEFINE_PROPERTY``` macro gets executed. This macro sets the wood density and thermal conductivity as a function of a progress variable. After executing the DEFINE_PROPERTY macro, Fluent performs outer iterations to solve the governing equations. After performing outer iterations, Fluent executes the DEFINE_EXECUTE_AT_END macro. This macro does not directly alter the governing equations; however, this macro consists of several user defined memories (C_UDMIs) which are used in the ```DEFINE_PROPERTY``` and ```DEFINE_SOURCE``` macros.  
 
-**Specific Usage Instructions \ Code Workflow:**
+**Specific Usage Instructions / Code Workflow:**
 
 Include relevant libraries before running the code. Be sure to include the UDF library in the preamble as follows:
 
