@@ -78,8 +78,8 @@ The char oxidation source term macros ```DEFINE_SOURCE(char_oxygen_sink, c, t, d
 2. Flow property functions (C_R(c,t) and C_T(c,t) for cell density and temperature) are not available to Fluent before the case is initialized. Therefore, you cannot use these functions in the DEFINE_EXECUTE_ON_LOADING macro.
 3. If you want to use DEFINE_SPECIFIC_HEAT to alter the wood specific heat, Fluent does not provide the capability to use / alter cell properties (i.e., C_T(c,t), C_R(c,t) etc.) within this macro.
 4. User defined memories on a boundary face (F_UDMIs) cannot be plotted as report plots or visualized using contour plots. Only C_UDMIs may be post-processed using report or contours plots.
-5. If you are calculating flow gradients or reconstruction gradients using UDFs, then you must enable temporary retainment of memory using solve/set/advanced/retain-temporary-solver-mem yes in your Fluent journal file.
-6. Be carefuly while altering or using global variables. These variables are **not** erased when a simulation is paused , interrupted, or re-initialized. The only way to reset the global variables is to unhook and hook the UDFs.
+5. If you are calculating flow gradients or reconstruction gradients using UDFs, then you must enable temporary retainment of memory by including ```solve/set/advanced/retain-temporary-solver-mem yes``` in your Fluent journal file.
+6. Be careful while altering or using global variables. These variables are **not** erased when a simulation is paused, interrupted, or re-initialized. The only way to reset the global variables is to unhook and re-hook the UDFs.
 7. The current UDF is parallelized. It is a good practice to parallize UDF macros (even if you are running them in serial). This [link](https://www.afs.enea.it/project/neptunius/docs/fluent/html/udf/node212.htm) provides detailed instructions on how to do this.
 
 **Citation:**
