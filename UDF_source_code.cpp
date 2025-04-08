@@ -106,7 +106,7 @@ float get_mole_fractions(float mass_fracs[], int index)
 	float co2_molecular_weight = 0.044; /* co2 molecular weight */
 	float h2_molecular_weight = 0.002; /* h2 molecular weight */
 	float n2_molecular_weight = 0.028; /* n2 molecular weight */
-	float Mol_weights[] = { oxygen_molecular_weight, water_molecular_weight, methane_molecular_weight, co_molecular_weight, co2_molecular_weight, h2_molecular_weight, n2_molecular_weight }; /* molecular weights array */
+	float Mol_weights[] = { oxygen_molecular_weight, water_molecular_weight, methane_molecular_weight, co_molecular_weight, co2_molecular_weight, h2_molecular_weight, n2_molecular_weight }; /* molecular weights array. The species order in the array is based on the species list in your gas phase combustion mechanism. Look at the species names in Fluent to determine the order. */
 	int length_weights = sizeof(Mol_weights) / sizeof(Mol_weights[0]); /* length of the species array */
 	int i;
 	float part_mole_frac;
