@@ -19,27 +19,19 @@ DEFINE_SOURCE sets the energy and species source terms in the current code. This
 
 static real total_mass_loss; /* define total mass loss variable */
 static real total_density_loss; /* define total density loss variable */
-//static real initial_density = 619.68506; /* initial density of wood */ /* change according to mass */
 static real initial_density = 660; /* initial density of wood */ /* change according to mass */
-//static real final_density = 164.21653543307; /* final density of wood */
 static real final_density = 0.265 * initial_density; /* final density of wood */
 static real ambient_temp = 300; /* ambient temperature */
 static real n_cells = 173965; /* Only accounting for pyrolysis on the surface, change this when refining or coarsening the mesh */
 static real cutoff_temperature = 873; /* cutoff temperature for high speed flow cases */
-static real reference_temperature = 288.16;
 static real time_loss;
 static real total_loss;
-//static real mass_char = 0.007; /* char oxidation mass (alter this after seeing the TGA curve) */
-//static real mass_ash = 0.001; /* ash mas (2% of char) */
-static real T_ref = 288.16; /* reference temperature in Fluent */
 static real e = 2.71828; /* e number */
 static real E_char = 124000; /* char oxidation activation energy kJ/mol*/
 static real A_char = pow(10, 6.55); /* pre-exponential factor char oxidation */
 static real n_char = 0.56; /* order of reaction */
 static real oxygen_exp_char = 0.68; /* oxygen exponent */
 static real R = 8.314; /* universal gas constant kJ/mol*/
-static real surf_vol = 4.4814465 * pow(10, -5); /* surface cell volume */
-static real solid_vol = 0.0001000248; /* volume of solid */
 static real E_hemicellulose = 102 * pow(10, 3); /* hemicellulose activation energy */
 static real E_cellulose = 193.7 * pow(10, 3); /* cellulose activation energy */
 static real E_lignin = 78.23 * pow(10, 3); /* lignin activiation energy */
@@ -262,19 +254,9 @@ DEFINE_PROPERTY(thermal_conductivity, c, t)
 	float temp;
 	real progress_variable;
 	temp = C_T(c, t);
-	//k_wood = 0.13 + (0.0003 * (temp - 273));
 
-	//if (temp >= 1073)
-	//{
-		//k_char = 0.001;
-	//}
-	//else
-	//{
-		//k_char = 0.08 - (0.0001 * (temp - 273));
-	//}
 	k_wood = 0.1327 + (0.000004813 * temp);
 	k_char = 0.05 + (0.0000002396 * temp);
-	//k_char = 0.0325 + (0.0000003945 * temp);
 
 	progress_variable = C_UDMI(c, t, 48); /* store the evaluated progress variable */
 	k_eff = (progress_variable * k_char) + ((1 - progress_variable) * k_wood);
@@ -294,13 +276,8 @@ DEFINE_EXECUTE_AT_END(execute_at_end) /*print density difference at the end of e
 	real vol_tot = 0.;
 	real global_volume = 0.;
 	real global_mass_loss = 0.;
-	real area_mag;
 	real temp;
-	real NV_VEC(A);
 	real char_mass_loss;
-	real h_m;
-	real r = 2;
-	real hc_eff = 21000;
 	cell_t c;
 	cell_t c0;
 	face_t f;
@@ -326,10 +303,6 @@ DEFINE_EXECUTE_AT_END(execute_at_end) /*print density difference at the end of e
 	Thread* t0 = Lookup_Thread(domain, fluid_ID); /* fluid domain thread */
 	real loss_cells = 0.0;
 	real loss_boundary = 0.0;
-	real greater_temp = 0.0;
-	real greater_area = 0.0;
-	real temp_for_average = 0.0;
-	real area_for_average = 0.0;
 	real progress_variable; /* define charring progress variable representing char fraction */
 	real hemicellulose_time_scale;
 	real cellulose_time_scale;
@@ -354,15 +327,8 @@ DEFINE_EXECUTE_AT_END(execute_at_end) /*print density difference at the end of e
 			{
 				if (C_UDMI(c, t, 2) == 0)
 				{
-					//C_UDMI(c, t, 1) = C_R(c, t) / C_UDMI(c, t, 17); /*updated density at current time step. Using apparent density */
 					C_UDMI(c, t, 1) = C_R(c, t); /*updated constant specific heat density at current time step*/
 					C_UDMI(c, t, 0) = C_R_M1(c, t); /* constant specific heat density at previous time step is given by C_R_M1(c,t) */
-					//if (flow_time == 0)
-					//{
-						//C_UDMI(c, t, 0) = C_R(c, t);
-					//}
-
-					//C_UDMI(c, t, 0) = C_R_M1(c, t) / C_UDMI(c, t, 17); /* density at previous time step is given by C_R_M1(c,t). Using apparent density */
 
 					if (C_UDMI(c, t, 1) > C_UDMI(c, t, 0))  /*find if density is increasing with each time step */
 					{
@@ -481,7 +447,6 @@ DEFINE_EXECUTE_AT_END(execute_at_end) /*print density difference at the end of e
 			global_cellulose_loss = PRF_GRSUM1(cellulose_loss);
 			global_lignin_loss = PRF_GRSUM1(lignin_loss);
 #endif /* RP NODE */
-			//vol_tot += vol_tot;
 
 			mlr = global_mass_loss / time_step;
 			density_loss = global_mass_loss / global_volume;
@@ -554,11 +519,8 @@ DEFINE_EXECUTE_AT_END(execute_at_end) /*print density difference at the end of e
 
 					face_t f_shadow = F_SHADOW(f0, tf0); /* get the shadow face index on the fluid side  */
 					Thread* t_shadow = THREAD_SHADOW(tf0); /* get the shadow face thread */
-					total_loss += C_UDMI(c0, t0, 29) * time_step; /* get total mass loss over the given node */
-					loss_cells += C_UDMI(c0, t0, 29); /* get the total mass loss rate at the current time step over the given node */
-					greater_temp += (C_UDMI(c0, t0, 22) * C_UDMI(c0, t0, 23)); /* get integral TdA over given node */
-					greater_area += C_UDMI(c0, t0, 23); /* get integral dA over given node */
-
+					total_loss += C_UDMI(c0, t0, 81) * time_step; /* get total mass loss over the given node */
+					loss_cells += C_UDMI(c0, t0, 81); /* get the total mass loss rate at the current time step over the given node */
 				}
 			}
 
@@ -568,10 +530,8 @@ DEFINE_EXECUTE_AT_END(execute_at_end) /*print density difference at the end of e
 
 #if RP_NODE /* perform global summing operation */
 
-		time_loss = PRF_GRSUM1(total_loss); /* sum over all nodes to get the total mass lost until the current time step */
+	time_loss = PRF_GRSUM1(total_loss); /* sum over all nodes to get the total mass lost until the current time step */
 	loss_boundary = PRF_GRSUM1(loss_cells); /* sum over all nodes to get the total mass loss rate */
-	temp_for_average = PRF_GRSUM1(greater_temp); /* sum over all nodes to get the  temperature sum */
-	area_for_average = PRF_GRSUM1(greater_area); /* sum over all nodes to get the area sum */
 #endif /* RP NODE */
 
 
@@ -589,9 +549,8 @@ DEFINE_EXECUTE_AT_END(execute_at_end) /*print density difference at the end of e
 			{
 				face_t f_shadow = F_SHADOW(f0, tf0); /* get the shadow face index */
 				Thread* t_shadow = THREAD_SHADOW(tf0); /* get the shadow face thread */
-				C_UDMI(c0, t0, 32) = time_loss; /* store total mass lost until current time step */
+				C_UDMI(c0, t0, 83) = time_loss; /* store total mass lost until current time step */
 				C_UDMI(c0, t0, 33) = C_UDMI(c0, t0, 29); /* store the char loss distribution in UDM */
-				C_UDMI(c0, t0, 34) = temp_for_average / area_for_average; /* store the area-averaged conditional temperature for the current time step in UDM */
 				C_UDMI(c0, t0, 42) = F_UDMI(f_shadow, t_shadow, 41); /* store mass loss rate in pyrolysis */
 				C_UDMI(c0, t0, 10) = F_UDMI(f_shadow, t_shadow, 9); /* store the char progress variable of boundary cells in the fluid domain */
 				C_UDMI(c0, t0, 20) = F_UDMI(f_shadow, t_shadow, 19); /* assign the density value */
@@ -644,9 +603,8 @@ DEFINE_EXECUTE_AT_END(execute_at_end_solid) /* loop over solid to assign char di
 
 						face_t f_shadow = F_SHADOW(f, tf); /* get the shadow face index */
 						Thread* t_shadow = THREAD_SHADOW(tf); /* get the shadow face thread */
-						C_UDMI(c, t, 35) = F_UDMI(f_shadow, t_shadow, 30); /* store the local char loss distribution (i.e., C_UDMI(c, t, 29)) in the solid domain */
+						C_UDMI(c, t, 35) = F_UDMI(f_shadow, t_shadow, 82); /* store the local char loss distribution (i.e., C_UDMI(c, t, 29)) in the solid domain */
 						C_UDMI(c, t, 36) = time_loss; /* store the total mass lost until current time step in the solid domain */
-						//C_UDMI(c, t, 37) = loss_boundary; /* total loss rate at current time step */
 					}
 				}
 			}
@@ -702,7 +660,6 @@ DEFINE_SOURCE(CO_kinetics, c, t, ds, eqn)
 	real total_flow_rate;
 	int CO_index = 3;
 	real mole_frac_co;
-	//int zone_ID = 91; /* ID of wood fluid interface */
 	int n = 0;
 	volume = C_VOLUME(c, t);
 
@@ -715,9 +672,7 @@ DEFINE_SOURCE(CO_kinetics, c, t, ds, eqn)
 		//if (index != -1) /* check if the cell face thread is equivalent to the boundary thread */
 		if (THREAD_ID(tf) == fluid_interface_ID)
 		{
-			total_flow_rate = ((total_hemicellulose_fraction * -C_UDMI(c, t, 63)) + (total_cellulose_fraction * -C_UDMI(c, t, 64)) + (total_lignin_fraction * -C_UDMI(c, t, 65)));
-			//source = ((hemicellulose_fraction * -C_UDMI(c, t, 63)) + (cellulose_fraction * -C_UDMI(c, t, 64)) + (lignin_fraction * -C_UDMI(c, t, 65))) / volume;
-			
+			total_flow_rate = ((total_hemicellulose_fraction * -C_UDMI(c, t, 63)) + (total_cellulose_fraction * -C_UDMI(c, t, 64)) + (total_lignin_fraction * -C_UDMI(c, t, 65)));			
 
 			if (total_flow_rate != 0)
 			{
@@ -728,7 +683,6 @@ DEFINE_SOURCE(CO_kinetics, c, t, ds, eqn)
 				mole_frac_co = get_mole_fractions(mass_fracs, CO_index);
 				source = (mole_frac_co / volume) * (-C_UDMI(c, t, 42) / n_cells);
 			}
-			//source = 0.24347133 * (-C_UDMI(c, t, 42) / (n_cells * volume));
 			C_UDMI(c, t, 56) = source;
 			C_UDMI(c, t, 69) = mole_frac_co;
 		}
@@ -760,7 +714,6 @@ DEFINE_SOURCE(CO2_kinetics, c, t, ds, eqn)
 	real total_flow_rate;
 	int CO2_index = 4;
 	real mole_frac_co2;
-	//int zone_ID = 91; /* ID of wood fluid interface */
 	int n = 0;
 	volume = C_VOLUME(c, t);
 
@@ -787,7 +740,6 @@ DEFINE_SOURCE(CO2_kinetics, c, t, ds, eqn)
 				//source = (((hemicellulose_fraction * -C_UDMI(c, t, 63)) + (cellulose_fraction * -C_UDMI(c, t, 64)) + (lignin_fraction * -C_UDMI(c, t, 65))) / volume) * (-C_UDMI(c, t, 42) / (n_cells * total_flow_rate));
 				source = (mole_frac_co2 / volume) * (-C_UDMI(c, t, 42) / n_cells);
 			}
-			//source = 0.50361981 * (-C_UDMI(c, t, 42) / (n_cells * volume));
 			C_UDMI(c, t, 57) = source;
 			C_UDMI(c, t, 70) = mole_frac_co2;
 		}
@@ -819,7 +771,6 @@ DEFINE_SOURCE(CH4_kinetics, c, t, ds, eqn)
 	real total_flow_rate;
 	int CH4_index = 2;
 	real mole_frac_ch4;
-	//int zone_ID = 91; /* ID of wood fluid interface */
 	int n = 0;
 	volume = C_VOLUME(c, t);
 
@@ -845,8 +796,6 @@ DEFINE_SOURCE(CH4_kinetics, c, t, ds, eqn)
 				//source = (((hemicellulose_fraction * -C_UDMI(c, t, 63)) + (cellulose_fraction * -C_UDMI(c, t, 64)) + (lignin_fraction * -C_UDMI(c, t, 65))) / volume) * (-C_UDMI(c, t, 42) / (n_cells * total_flow_rate));
 				source = (mole_frac_ch4 / volume) * (-C_UDMI(c, t, 42) / n_cells);
 			}
-			//source = ((hemicellulose_fraction * -C_UDMI(c, t, 63)) + (cellulose_fraction * -C_UDMI(c, t, 64)) + (lignin_fraction * -C_UDMI(c, t, 65))) / volume;
-			//source = 0.25290885 * (-C_UDMI(c, t, 42) / (n_cells * volume));
 			C_UDMI(c, t, 58) = source;
 			C_UDMI(c, t, 71) = mole_frac_ch4;
 		}
@@ -892,6 +841,12 @@ DEFINE_SOURCE(lignin_hod, c, t, ds, eqn)
 
 /* Char oxidation species source terms */
 
+/* The char oxidation macros include species source terms, i.e., CO, CO2, and O2, which are modeled using the following single-step global reaction.
+	C + (1 - (f/2))O2 -> fCO + (1-f)CO2
+ In the default state below, partial oxidation to CO is considered. The CO2 source term is commented out. Practically, smoldering during wood combustion only involves partial oxidation. Thus, complete oxidation to CO2 is not likely. Associated with the CO/CO2 split, the energy source term is assigned. For the present code, the energy source is 9 MJ/kg for partial oxidation to CO. Complete oxidation to CO2 produces ~32 MJ/kg.
+ The char mass loss rate is computed using Arrhenius rate parameters provided by Anca-Couce et al. https://doi.org/10.1016/j.combustflame.2011.11.015
+*/
+
 /* Oxygen sink */
 DEFINE_SOURCE(oxygen_sink, c, t, ds, eqn)
 {
@@ -899,35 +854,12 @@ DEFINE_SOURCE(oxygen_sink, c, t, ds, eqn)
 	real volume; /*cell volume */
 	int n = 0;
 	real r = 1.333;
-	real NV_VEC(A);
-	real area_mag, area_actual;
 	real loss_rate;
 	real temp_surface;
 	real oxygen_massfrac;
-	real h_m;
 	real k;
 	real density_surface;
-	real h;
-	real specific_heat;
-	real char_flux, flux_term;
-	real x, y, z;
-	real heat_flux;
-	real temp_grad;
-	real temp_square;
 	real shrinkage, factor;
-	real k_empirical;
-	real temp_film;
-	real mu;
-	real density;
-	real Nu;
-	real Re;
-	real h_empirical;
-	real h_prime;
-	real d_prime;
-	real Re_prime, Nu_prime;
-	real h_factor;
-	real k_char = 0.176;
-	real wall_adj_temp;
 	int oxygen_index = 0; /* oxygen index in the species names */
 	int water_index = 1; /* water vapor index in the species names */
 	int methane_index = 2; /* methane index in the species names */
@@ -944,34 +876,32 @@ DEFINE_SOURCE(oxygen_sink, c, t, ds, eqn)
 	float n2_mf;
 	float mole_frac_o2; /* oxygen mole fraction */
 	real conversion; /* conversion from TGA */
+	real cumulative_loss; /* cumulative char mass loss */
+	real dt = CURRENT_TIMESTEP; /* timestep in seconds */
 	real exp_factor_char;
-	real flux_num;
-	//real char_progress = 0.95;
-	real char_progress = C_UDMI(c, t, 10);
-	//real mass_char = (((1 - char_progress) * initial_density) + (char_progress * final_density)) * surf_vol;
-	//real mass_char = ((char_progress * final_density)) * surf_vol;
-	real mass_char = ((char_progress * final_density)) * C_VOLUME(c, t);
-	real mass_ash = 0.02 * mass_char;
+	real char_progress;
+	real mass_char;
+	real mass_ash;
 
 	c_face_loop(c, t, n)
 	{
 		Thread* tf = C_FACE_THREAD(c, t, n); /* boundary face thread */
-		//float* fluid_interface_IDs = populate_linear_space(step_size_fluid_bounds, fluid_interface_ID_begin, fluid_interface_ID_end); /* populate fluid interface ID array */
-		//int index = search_array(fluid_interface_IDs, step_size_fluid_bounds, THREAD_ID(tf));
 
-		//if (index != -1) /* check if the cell face thread is equivalent to the boundary thread */
-		if (THREAD_ID(tf) == fluid_interface_ID)
+		if (THREAD_ID(tf) == fluid_zone_ID) /* check if the cell face thread is equivalent to the boundary thread */
 		{
 			face_t f = C_FACE(c, t, n); /* get face index */
 			temp_surface = F_T(f, tf); /* surface temperature */
-			density_surface = C_R(c, t); /* adjacent cell density at the surface */
-			shrinkage = C_UDMI(c, t, 32) / (mass_char - mass_ash); /* get shrinkage factor from its definition */
-			factor = 1 - shrinkage;
-			F_AREA(A, f, tf);
-			area_mag = NV_MAG(A) * pow(factor, 0.667); /* incorporate shrinkage factor */
-			area_actual = NV_MAG(A);
+			char_progress = C_UDMI(c, t, 10);
 			volume = C_VOLUME(c, t);
-			oxygen_massfrac = 0.2333;
+			mass_char = ((char_progress * final_density)) * volume; /* mass of char */
+			mass_ash = 0.02 * mass_char; /* mass of ash */
+			density_surface = C_R(c, t); /* adjacent cell density at the surface */
+			// Retrieve cumulative loss from last time step
+			cumulative_loss = C_UDMI(c, t, 88);
+			shrinkage = cumulative_loss / (mass_char - mass_ash); /* shrinkage factor */
+			if (shrinkage >= 1.0) shrinkage = 1.0; /* check if shrinkage factor is exceeding 1*/
+			if (isnan(shrinkage)) shrinkage = 0.0; /* check if shrinkage factor is NaN */
+			factor = 1 - shrinkage;
 			oxygen_mf = C_YI(c, t, oxygen_index); /* mass fraction of oxidizer */
 			water_mf = C_YI(c, t, water_index); /* mass fraction of water */
 			methane_mf = C_YI(c, t, methane_index); /* mass fraction of methane */
@@ -982,32 +912,22 @@ DEFINE_SOURCE(oxygen_sink, c, t, ds, eqn)
 			float mass_fracs[] = { oxygen_mf, water_mf, methane_mf, co_mf, co2_mf, h2_mf, n2_mf }; /* species mass fraction array */
 			mole_frac_o2 = get_mole_fractions(mass_fracs, oxygen_index); /* normalized mole fraction of o2 */
 			conversion = ((mass_char * factor) - mass_ash) / (mass_char - mass_ash);
+			if (isnan(conversion)) conversion = 1; /* check if conversion is NaN */
 			exp_factor_char = -(E_char / (R * temp_surface));
+			loss_rate = A_char * pow(e, exp_factor_char) * pow((mole_frac_o2 / 0.205), oxygen_exp_char) * 0.98 * char_progress * final_density * pow(conversion, n_char) * volume; // use an if flag with C_UDMI(c, t, 10) >= 0.95, i.e., progress variable greater than 95% if the oxidation source terms lead to instabilities.
+			//loss_rate = A_char * pow(e, exp_factor_char) * pow((mole_frac_o2 / 0.205), oxygen_exp_char) * 0.98 * char_progress * final_density * pow(conversion, n_char) * volume; // use this version if the char oxidation source terms still lead to instabilities. Conversion timescales for char oxidation are much longer than the pyrolytic degradation timescales.
+			C_UDMI(c, t, 81) = loss_rate; /* store the char loss rate */
+			F_UDMI(f, tf, 82) = loss_rate; /* store the char loss rate in a face thread for shadow face operations */
 
-			if (C_UDMI(c, t, 10) >= 0.95)
-			{
-				flux_num = A_char * pow(e, exp_factor_char) * pow((mole_frac_o2 / 0.205), oxygen_exp_char) * 0.98 * char_progress * final_density * pow(conversion, n_char) * volume;
-
-			}
-			else
-			{
-				flux_num = 0;
-			}
-			/* Loop to calculate char flux */
-			char_flux = (flux_num / area_mag); /* scale the mass flux with the char progress variable */
-			C_UDMI(c, t, 22) = temp_surface; /* store temperature of those cells which are greater than 873 K */
-			C_UDMI(c, t, 23) = area_mag; /* store area of those cells which have a temperature greater than 873 K */
-
-			loss_rate = flux_num; /* char loss calculated from char flux */
-			C_UDMI(c, t, 24) = char_flux * 1000;
-			flux_term = -(char_flux * r);
-			//C_UDMI(c, t, 25) = flux_term; /* oxygen sink flux */
-			source = -(r * loss_rate) / volume;
-			C_UDMI(c, t, 25) = source;
+			// Update cumulative loss
+			cumulative_loss += loss_rate * dt;
+			C_UDMI(c, t, 88) = cumulative_loss;
+			
+			source = -(r * loss_rate) / (volume);
 		}
 	}
 
-
+	C_UDMI(c, t, 87) = source; /* store the oxygen sink in UDM */
 	ds[eqn] = 0.0;
 	return source;
 }
@@ -1018,36 +938,11 @@ DEFINE_SOURCE(char_co2_flux, c, t, ds, eqn)
 	real source = 0.0;
 	real volume; /*cell volume */
 	int n = 0;
-	real r = 0.5;
-	real NV_VEC(A);
-	real area_mag, area_actual;
+	real r = 1.333;
 	real loss_rate;
 	real temp_surface;
-	real oxygen_massfrac;
-	real h_m;
-	real k;
 	real density_surface;
-	real h;
-	real specific_heat;
-	real char_flux, flux_term;
-	real x, y, z;
-	real heat_flux;
-	real temp_grad;
-	real temp_square;
 	real shrinkage, factor;
-	real k_empirical;
-	real temp_film;
-	real mu;
-	real density;
-	real Nu;
-	real Re;
-	real h_empirical;
-	real h_prime;
-	real d_prime;
-	real Re_prime, Nu_prime;
-	real h_factor;
-	real k_char = 0.176;
-	real wall_adj_temp;
 	int oxygen_index = 0; /* oxygen index in the species names */
 	int water_index = 1; /* water vapor index in the species names */
 	int methane_index = 2; /* methane index in the species names */
@@ -1064,31 +959,34 @@ DEFINE_SOURCE(char_co2_flux, c, t, ds, eqn)
 	float n2_mf;
 	float mole_frac_o2; /* oxygen mole fraction */
 	real conversion; /* conversion from TGA */
+	real cumulative_loss; /* cumulative char mass loss */
+	real dt = CURRENT_TIMESTEP; /* timestep in seconds */
 	real exp_factor_char;
 	real flux_num;
-	real char_progress = C_UDMI(c, t, 10);
-	real mass_char = ((char_progress * final_density)) * C_VOLUME(c, t);
-	real mass_ash = 0.02 * mass_char;
-	
+	real char_progress; /* progress variable */
+	real mass_char;
+	real mass_ash;
+
 	c_face_loop(c, t, n)
 	{
 		Thread* tf = C_FACE_THREAD(c, t, n); /* boundary face thread */
-		//float* fluid_interface_IDs = populate_linear_space(step_size_fluid_bounds, fluid_interface_ID_begin, fluid_interface_ID_end); /* populate fluid interface ID array */
-		//int index = search_array(fluid_interface_IDs, step_size_fluid_bounds, THREAD_ID(tf));
 
-		//if (index != -1) /* check if the cell face thread is equivalent to the boundary thread */
-		if (THREAD_ID(tf) == fluid_interface_ID)
+		if (THREAD_ID(tf) == fluid_zone_ID) /* check if the cell face thread is equivalent to the boundary thread */
 		{
 			face_t f = C_FACE(c, t, n); /* get face index */
 			temp_surface = F_T(f, tf); /* surface temperature */
 			density_surface = C_R(c, t); /* adjacent cell density at the surface */
-			shrinkage = C_UDMI(c, t, 32) / (mass_char - mass_ash); /* get shrinkage factor from its definition */
-			factor = 1 - shrinkage;
-			F_AREA(A, f, tf);
-			area_mag = NV_MAG(A) * pow(factor, 0.667); /* incorporate shrinkage factor */
-			area_actual = NV_MAG(A);
+			char_progress = C_UDMI(c, t, 10);
 			volume = C_VOLUME(c, t);
-			oxygen_massfrac = 0.2333;
+			mass_char = ((char_progress * final_density)) * volume;
+			mass_ash = 0.02 * mass_char;
+			// Retrieve cumulative loss from last time step
+			cumulative_loss = C_UDMI(c, t, 89);
+			shrinkage = cumulative_loss / (mass_char - mass_ash); /* shrinkage factor */
+			if (shrinkage >= 1.0) shrinkage = 1.0; /* check if shrinkage factor is exceeding 1*/
+			if (isnan(shrinkage)) shrinkage = 0.0; /* check if shrinkage factor is NaN */
+			C_UDMI(c, t, 86) = shrinkage; /* store the shrinkage factor */
+			factor = 1 - shrinkage;
 			oxygen_mf = C_YI(c, t, oxygen_index); /* mass fraction of oxidizer */
 			water_mf = C_YI(c, t, water_index); /* mass fraction of water */
 			methane_mf = C_YI(c, t, methane_index); /* mass fraction of methane */
@@ -1099,28 +997,20 @@ DEFINE_SOURCE(char_co2_flux, c, t, ds, eqn)
 			float mass_fracs[] = { oxygen_mf, water_mf, methane_mf, co_mf, co2_mf, h2_mf, n2_mf }; /* species mass fraction array */
 			mole_frac_o2 = get_mole_fractions(mass_fracs, oxygen_index); /* mole fraction of o2 */
 			conversion = ((mass_char * factor) - mass_ash) / (mass_char - mass_ash);
+			if (isnan(conversion)) conversion = 1; /* check if conversion is NaN */
 			exp_factor_char = -(E_char / (R * temp_surface));
+			loss_rate = A_char * pow(e, exp_factor_char) * pow((mole_frac_o2 / 0.205), oxygen_exp_char) * 0.98 * char_progress * final_density * pow(conversion, n_char) * volume;
 
-			if (C_UDMI(c, t, 10) >= 0.95)
-			{
-				flux_num = A_char * pow(e, exp_factor_char) * pow((mole_frac_o2 / 0.205), oxygen_exp_char) * 0.98 * char_progress * final_density * pow(conversion, n_char) * volume;
-			}
-			else
-			{
-				flux_num = 0;
-			}
-			/* Loop to calculate char flux */
-			char_flux = (flux_num / area_mag); /* scale the mass flux with the char progress variable */
-
-			loss_rate = flux_num;
-			flux_term = (0.9166 * char_flux) / r;
-			//C_UDMI(c, t, 26) = flux_term;
-			source = (loss_rate * 0.9166) / (volume * r);
-			C_UDMI(c, t, 26) = source;
+			// Update cumulative loss
+			cumulative_loss += loss_rate * dt;
+			C_UDMI(c, t, 89) = cumulative_loss;
+			
+			//source = (r * loss_rate) / (volume);
+			
 		}
 	}
 
-
+	C_UDMI(c, t, 84) = source; /* store the CO2 source in UDM */
 	ds[eqn] = 0.0;
 	return source;
 }
@@ -1131,36 +1021,11 @@ DEFINE_SOURCE(char_co_flux, c, t, ds, eqn)
 	real source = 0.0;
 	real volume; /*cell volume */
 	int n = 0;
-	real r = 1.333;
-	real NV_VEC(A);
-	real area_mag, area_actual;
+	real r = 0.5;
 	real loss_rate;
 	real temp_surface;
-	real oxygen_massfrac;
-	real h_m;
-	real k;
 	real density_surface;
-	real h;
-	real specific_heat;
-	real char_flux, flux_term;
-	real x, y, z;
-	real heat_flux;
-	real temp_grad;
-	real temp_square;
 	real shrinkage, factor;
-	real k_empirical;
-	real temp_film;
-	real mu;
-	real density;
-	real Nu;
-	real Re;
-	real h_empirical;
-	real h_prime;
-	real d_prime;
-	real Re_prime, Nu_prime;
-	real h_factor;
-	real k_char = 0.176;
-	real wall_adj_temp;
 	int oxygen_index = 0; /* oxygen index in the species names */
 	int water_index = 1; /* water vapor index in the species names */
 	int methane_index = 2; /* methane index in the species names */
@@ -1177,31 +1042,32 @@ DEFINE_SOURCE(char_co_flux, c, t, ds, eqn)
 	float n2_mf;
 	float mole_frac_o2; /* oxygen mole fraction */
 	real conversion; /* conversion from TGA */
+	real cumulative_loss; /* cumulative char mass loss */
+	real dt = CURRENT_TIMESTEP; /* timestep in seconds */
 	real exp_factor_char;
-	real flux_num;
-	real char_progress = C_UDMI(c, t, 10);
-	real mass_char = ((char_progress * final_density)) * C_VOLUME(c, t);
-	real mass_ash = 0.02 * mass_char;
+	real char_progress;
+	real mass_char;
+	real mass_ash;
 	
 	c_face_loop(c, t, n)
 	{
 		Thread* tf = C_FACE_THREAD(c, t, n); /* boundary face thread */
-		//float* fluid_interface_IDs = populate_linear_space(step_size_fluid_bounds, fluid_interface_ID_begin, fluid_interface_ID_end); /* populate fluid interface ID array */
-		//int index = search_array(fluid_interface_IDs, step_size_fluid_bounds, THREAD_ID(tf));
 
-		//if (index != -1) /* check if the cell face thread is equivalent to the boundary thread */
-		if (THREAD_ID(tf) == fluid_interface_ID)
+		if (THREAD_ID(tf) == fluid_zone_ID) /* check if the cell face thread is equivalent to the boundary thread */
 		{
 			face_t f = C_FACE(c, t, n); /* get face index */
+			char_progress = C_UDMI(c, t, 10);
+			volume = C_VOLUME(c, t);
+			mass_char = ((char_progress * final_density)) * volume;
+			mass_ash = 0.02 * mass_char;
 			temp_surface = F_T(f, tf); /* surface temperature */
 			density_surface = C_R(c, t); /* adjacent cell density at the surface */
-			shrinkage = C_UDMI(c, t, 32) / (mass_char - mass_ash); /* get shrinkage factor from its definition */
+			// Retrieve cumulative loss from last time step
+			cumulative_loss = C_UDMI(c, t, 90);
+			shrinkage = cumulative_loss / (mass_char - mass_ash); /* shrinkage factor */
+			if (shrinkage >= 1.0) shrinkage = 1.0; /* check if shrinkage factor is exceeding 1*/
+			if (isnan(shrinkage)) shrinkage = 0.0; /* check if shrinkage factor is NaN */
 			factor = 1 - shrinkage;
-			F_AREA(A, f, tf);
-			area_mag = NV_MAG(A) * pow(factor, 0.667); /* incorporate shrinkage factor */
-			area_actual = NV_MAG(A);
-			volume = C_VOLUME(c, t);
-			oxygen_massfrac = 0.2333;
 			oxygen_mf = C_YI(c, t, oxygen_index); /* mass fraction of oxidizer */
 			water_mf = C_YI(c, t, water_index); /* mass fraction of water */
 			methane_mf = C_YI(c, t, methane_index); /* mass fraction of methane */
@@ -1213,33 +1079,21 @@ DEFINE_SOURCE(char_co_flux, c, t, ds, eqn)
 			mole_frac_o2 = get_mole_fractions(mass_fracs, oxygen_index); /* mole fraction of o2 */
 			C_UDMI(c, t, 49) = mole_frac_o2;
 			conversion = ((mass_char * factor) - mass_ash) / (mass_char - mass_ash);
+			if (isnan(conversion)) conversion = 1; /* check if conversion is NaN */
 			C_UDMI(c, t, 50) = conversion;
 			exp_factor_char = -(E_char / (R * temp_surface));
 			C_UDMI(c, t, 51) = exp_factor_char;
+			loss_rate = A_char * pow(e, exp_factor_char) * pow((mole_frac_o2 / 0.205), oxygen_exp_char) * 0.98 * char_progress * final_density * pow(conversion, n_char) * volume * C_UDMI(c, t, 10);
 
-			if (C_UDMI(c, t, 10) >= 0.95)
-			{
-				flux_num = A_char * pow(e, exp_factor_char) * pow((mole_frac_o2 / 0.205), oxygen_exp_char) * 0.98 * char_progress * final_density * pow(conversion, n_char) * volume;
-			}
-			else
-			{
-				flux_num = 0;
-			}
-			C_UDMI(c, t, 52) = flux_num;
-			/* Loop to calculate char flux */
-			char_flux = (flux_num / area_mag); /* scale the mass flux with the char progress variable */
-
-			loss_rate = flux_num;
-			flux_term = ((r + 1) * char_flux); /* CO flux term */
-			C_UDMI(c, t, 27) = flux_term;
-			source = ((r + 1) * loss_rate) / volume;
-			C_UDMI(c, t, 29) = loss_rate;
-			F_UDMI(f, tf, 30) = loss_rate; /* store in F_UDMI for shadow face operations */
-			C_UDMI(c, t, 31) = factor; /* shrinkage factor storage */
+			// Update cumulative loss
+			cumulative_loss += loss_rate * dt;
+			C_UDMI(c, t, 90) = cumulative_loss;
+		
+			source = (0.5833 * loss_rate) / (volume * r);
 		}
 	}
 
-
+	C_UDMI(c, t, 85) = source; /* store the CO source in UDM */
 	ds[eqn] = 0.0;
 	return source;
 }
@@ -1260,20 +1114,17 @@ DEFINE_SOURCE(char_energy_source, c, t, ds, eqn)
 	{
 		Thread* tf = C_FACE_THREAD(c, t, n); /* get global face threads */
 		face_t f = C_FACE(c, t, n); /* get global face ID for the boundary cell face */
-		//float* solid_interface_IDs = populate_linear_space(step_size_solid_bounds, solid_interface_ID_begin, solid_interface_ID_end); /* array containing solid interface IDs */
-		//int index = search_array(solid_interface_IDs, step_size_solid_bounds, THREAD_ID(tf)); /* search whether the curret solid thread belongs to the solid interface */
-		//if (index != -1 && F_UDMI(f, tf, 9) >= 0.95) //&& F_UDMI(f, tf, 19) == final_density) /* verify if the face thread matches the with the surface ID of the wood fluid interface */
-		if (THREAD_ID(tf) == solid_interface_ID)
+
+		if (THREAD_ID(tf) == fluid_zone_ID && C_UDMI(c, t, 10) >= 0.95)
 		{
 			face_t f = C_FACE(c, t, n); /* get global face ID for the boundary cell face */
-			shrinkage = C_UDMI(c, t, 36) / mass_char;
-			factor = 1 - shrinkage;
 			volume = C_VOLUME(c, t); /* get volume of the neighbouring cell*/
-			source = (17460 * 1000 * C_UDMI(c, t, 35)) / volume; /* C_UDMI(c,t,16) is the char loss distribution */
+			source = (9000 * 1000 * C_UDMI(c, t, 81)) / volume; /* C_UDMI(c,t,16) is the char loss distribution. 9 MJ/kg is the char oxidation energy source term for partial char oxidation to CO */
 			C_UDMI(c, t, 38) = source;
 		}
 	}
 
 	ds[eqn] = 0.0; /* explicit evaluation of source term */
 	return source;
+
 }
