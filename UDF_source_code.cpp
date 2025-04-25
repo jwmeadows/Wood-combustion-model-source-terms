@@ -1084,7 +1084,7 @@ DEFINE_SOURCE(char_co_flux, c, t, ds, eqn)
 			exp_factor_char = -(E_char / (R * temp_surface));
 			C_UDMI(c, t, 51) = exp_factor_char;
 			loss_rate = A_char * pow(e, exp_factor_char) * pow((mole_frac_o2 / 0.205), oxygen_exp_char) * 0.98 * char_progress * final_density * pow(conversion, n_char) * volume * C_UDMI(c, t, 10);
-
+			//loss_rate = A_char * pow(e, exp_factor_char) * pow((mole_frac_o2 / 0.205), oxygen_exp_char) * 0.98 * char_progress * final_density * pow(conversion, n_char) * volume; // use this version if the char oxidation source terms still lead to instabilities. Conversion timescales for char oxidation are much longer than the pyrolytic degradation timescales.
 			// Update cumulative loss
 			cumulative_loss += loss_rate * dt;
 			C_UDMI(c, t, 90) = cumulative_loss;
