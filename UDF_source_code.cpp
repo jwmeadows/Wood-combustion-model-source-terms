@@ -88,7 +88,7 @@ int search_array(float* numbers, int size, float search_value) {
 }
 
 /* calculate mole fraction of species from mass fractions */
-
+/* Be mindful of the species order in your mechanism. In this code, the species order is as follows: O2, CH4, CO, CO2, H2, N2 */
 float get_mole_fractions(float mass_fracs[], int index)
 {
 	float oxygen_molecular_weight = 0.032; /* oxygen molecular weight */
@@ -111,7 +111,7 @@ float get_mole_fractions(float mass_fracs[], int index)
 	part_mole_frac = mass_fracs[index] / Mol_weights[index];
 	mole_frac = part_mole_frac / mixture_mol_weight;
 
-	return mole_frac;
+	return mole_frac; // return array containing mole fractions
 }
 
 
@@ -137,12 +137,12 @@ DEFINE_INIT(density_initial, domain)
 
 			/*Define density at previous time step and current time step*/
 			temp = C_T(c, t);
-			C_UDMI(c, t, 0) = C_R(c, t); // no apparent density. uncomment this stuff
+			C_UDMI(c, t, 0) = C_R(c, t); // set UDM 0 and UDM 1 to be densities. These will be edited later using the EXECUTE_AT_END macro. 
 			C_UDMI(c, t, 1) = C_R(c, t);
 	
 			if (C_R(c, t) <= rho_crit)
 			{
-				C_UDMI(c, t, 2) = 1; /*flag to indicate if the density variable is within the critical region*/
+				C_UDMI(c, t, 2) = 1; /*flag to indicate if the density variable is within the critical region, i.e., completely charred */
 			}
 			else
 			{
