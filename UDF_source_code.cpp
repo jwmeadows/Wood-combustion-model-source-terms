@@ -915,7 +915,7 @@ DEFINE_SOURCE(oxygen_sink, c, t, ds, eqn)
 			if (isnan(conversion)) conversion = 1; /* check if conversion is NaN */
 			exp_factor_char = -(E_char / (R * temp_surface));
 			loss_rate = A_char * pow(e, exp_factor_char) * pow((mole_frac_o2 / 0.205), oxygen_exp_char) * 0.98 * char_progress * final_density * pow(conversion, n_char) * volume; // use an if flag with C_UDMI(c, t, 10) >= 0.95, i.e., progress variable greater than 95% if the oxidation source terms lead to instabilities.
-			//loss_rate = A_char * pow(e, exp_factor_char) * pow((mole_frac_o2 / 0.205), oxygen_exp_char) * 0.98 * char_progress * final_density * pow(conversion, n_char) * volume; // use this version if the char oxidation source terms still lead to instabilities. Conversion timescales for char oxidation are much longer than the pyrolytic degradation timescales.
+			//loss_rate = A_char * pow(e, exp_factor_char) * pow((mole_frac_o2 / 0.205), oxygen_exp_char) * 0.98 * char_progress * final_density * volume; // use this version if the char oxidation source terms still lead to instabilities. Conversion timescales for char oxidation are much longer than the pyrolytic degradation timescales.
 			C_UDMI(c, t, 81) = loss_rate; /* store the char loss rate */
 			F_UDMI(f, tf, 82) = loss_rate; /* store the char loss rate in a face thread for shadow face operations */
 
@@ -1000,7 +1000,7 @@ DEFINE_SOURCE(char_co2_flux, c, t, ds, eqn)
 			if (isnan(conversion)) conversion = 1; /* check if conversion is NaN */
 			exp_factor_char = -(E_char / (R * temp_surface));
 			loss_rate = A_char * pow(e, exp_factor_char) * pow((mole_frac_o2 / 0.205), oxygen_exp_char) * 0.98 * char_progress * final_density * pow(conversion, n_char) * volume;
-
+			//loss_rate = A_char * pow(e, exp_factor_char) * pow((mole_frac_o2 / 0.205), oxygen_exp_char) * 0.98 * char_progress * final_density * volume; // use this version if the char oxidation source terms still lead to instabilities. Conversion timescales for char oxidation are much longer than the pyrolytic degradation timescales.
 			// Update cumulative loss
 			cumulative_loss += loss_rate * dt;
 			C_UDMI(c, t, 89) = cumulative_loss;
@@ -1083,8 +1083,8 @@ DEFINE_SOURCE(char_co_flux, c, t, ds, eqn)
 			C_UDMI(c, t, 50) = conversion;
 			exp_factor_char = -(E_char / (R * temp_surface));
 			C_UDMI(c, t, 51) = exp_factor_char;
-			loss_rate = A_char * pow(e, exp_factor_char) * pow((mole_frac_o2 / 0.205), oxygen_exp_char) * 0.98 * char_progress * final_density * pow(conversion, n_char) * volume * C_UDMI(c, t, 10);
-			//loss_rate = A_char * pow(e, exp_factor_char) * pow((mole_frac_o2 / 0.205), oxygen_exp_char) * 0.98 * char_progress * final_density * pow(conversion, n_char) * volume; // use this version if the char oxidation source terms still lead to instabilities. Conversion timescales for char oxidation are much longer than the pyrolytic degradation timescales.
+			loss_rate = A_char * pow(e, exp_factor_char) * pow((mole_frac_o2 / 0.205), oxygen_exp_char) * 0.98 * char_progress * final_density * pow(conversion, n_char) * volume;
+			//loss_rate = A_char * pow(e, exp_factor_char) * pow((mole_frac_o2 / 0.205), oxygen_exp_char) * 0.98 * char_progress * final_density * volume; // use this version if the char oxidation source terms still lead to instabilities. Conversion timescales for char oxidation are much longer than the pyrolytic degradation timescales.
 			// Update cumulative loss
 			cumulative_loss += loss_rate * dt;
 			C_UDMI(c, t, 90) = cumulative_loss;
